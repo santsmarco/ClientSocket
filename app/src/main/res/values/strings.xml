@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ClientSocket</string>
+    <string name="app_name">ClientDirect</string>
     <string name="xml_example">
         <![CDATA[
             <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
