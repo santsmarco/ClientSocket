@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -53,7 +54,7 @@ class MainActivity : AppCompatActivity() {
                 socket = Socket()
 
                 // Tempo limite para a conexão (em milissegundos)
-                val connectionTimeout = 10000 // 10 segundos
+                val connectionTimeout = 15000 // 15 segundos
                 socket.connect(InetSocketAddress(serverAddress, serverPort.toInt()), connectionTimeout)
 
                 socket.receiveBufferSize = 20000
@@ -74,12 +75,16 @@ class MainActivity : AppCompatActivity() {
                     val inputStream = socket.getInputStream()
                     val scanner = Scanner(inputStream)
 
-                    val readTimeout = 10000 // 10 segundos
+                    val readTimeout = 15000 // 15 segundos
                     socket.soTimeout = readTimeout
 
                     val serverResponse = scanner.nextLine()
 
-                    if (serverResponse == "true") {
+                    val jsonResponse = JSONObject(serverResponse)
+                    val success = jsonResponse.getBoolean("success")
+                    val errorMessage = jsonResponse.getString("errorMessage")
+
+                    if (success) {
                         runOnUiThread {
                             txtResponseServer.text = "Response do servidor: ${serverResponse}"
                             Toast.makeText(this, "Sucesso envio", Toast.LENGTH_SHORT).show()
