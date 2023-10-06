@@ -13,7 +13,9 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.OutputStream
+import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.util.Scanner
 
 class MainActivity : AppCompatActivity() {
@@ -33,12 +35,12 @@ class MainActivity : AppCompatActivity() {
         txtResponseServer = findViewById(R.id.txtResponseServer)
         sendButton.setOnClickListener {
             var ip = edtIpServer.text.toString()
-            if(ip.isNotEmpty()){
+            if (ip.isNotEmpty()) {
                 val serverAddress = edtIpServer.text.toString() // Endereço IP do servidor
                 val serverPort = "2222" // Porta do servidor
                 val xmlData = getString(R.string.xml_example)
-                sendDataToServer(xmlData,serverAddress,serverPort)
-            }else{
+                sendDataToServer(xmlData, serverAddress, serverPort)
+            } else {
                 Toast.makeText(this, "Digite um ip", Toast.LENGTH_SHORT).show()
             }
         }
@@ -48,13 +50,17 @@ class MainActivity : AppCompatActivity() {
         Thread {
             var socket: Socket? = null
             try {
+                socket = Socket()
 
-                socket = Socket(serverAddress, serverPort.toInt())
+                // Tempo limite para a conexão (em milissegundos)
+                val connectionTimeout = 10000 // 10 segundos
+                socket.connect(InetSocketAddress(serverAddress, serverPort.toInt()), connectionTimeout)
+
                 socket.receiveBufferSize = 20000
                 val outputStream: OutputStream = socket.getOutputStream()
 
                 // Substituir "xmlData" pela sua string XML
-                //val xmlData = edtXml.text.toString()
+                // val xmlData = edtXml.text.toString()
 
                 // Enviar os dados para o servidor com o XML
                 outputStream.write(xmlData.toByteArray())
@@ -64,9 +70,13 @@ class MainActivity : AppCompatActivity() {
                 socket.tcpNoDelay = true
 
                 try {
-                    //Obter resposta do servidor com confirmação do recebimento
+                    // Obter resposta do servidor com confirmação do recebimento
                     val inputStream = socket.getInputStream()
                     val scanner = Scanner(inputStream)
+
+                    val readTimeout = 10000 // 10 segundos
+                    socket.soTimeout = readTimeout
+
                     val serverResponse = scanner.nextLine()
 
                     if (serverResponse == "true") {
@@ -74,40 +84,57 @@ class MainActivity : AppCompatActivity() {
                             txtResponseServer.text = "Response do servidor: ${serverResponse}"
                             Toast.makeText(this, "Sucesso envio", Toast.LENGTH_SHORT).show()
                         }
+                        //fazer evaluateJavaScrip pro front
                     } else {
                         runOnUiThread {
                             txtResponseServer.text = "Response do servidor: ${serverResponse}"
                             Toast.makeText(this, "Erro envio", Toast.LENGTH_SHORT).show()
                         }
+                        //fazer evaluateJavaScrip pro front
                     }
                 } catch (e: IOException) {
-                    e.printStackTrace()
                     runOnUiThread {
-                        txtResponseServer.text = "Catch response: ${e.message.toString()}"
+                        txtResponseServer.text = "Erro de E/S ao ler resposta do servidor: ${e.message.toString()}"
                         Toast.makeText(this, "Erro de E/S ao ler resposta do servidor", Toast.LENGTH_SHORT).show()
                     }
-                } catch (e: NullPointerException) {
-                    e.printStackTrace()
+                    //fazer evaluateJavaScrip pro front
+                } catch (e: SocketTimeoutException) {
                     runOnUiThread {
-                        txtResponseServer.text = "Catch NullPointerException: ${e.message.toString()}"
-                        Toast.makeText(
-                            this,
-                            "NullPointerException ao ler resposta do servidor",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        txtResponseServer.text = "Tempo limite excedido ao ler resposta do servidor: ${e.message.toString()}"
+                        Toast.makeText(this, "Tempo limite excedido ao ler resposta do servidor", Toast.LENGTH_SHORT).show()
+                        //fazer evaluateJavaScrip pro front com false após timeout
                     }
+                } catch (e: NullPointerException) {
+                    runOnUiThread {
+                        txtResponseServer.text = "NullPointerException ao ler resposta do servidor: ${e.message.toString()}"
+                        Toast.makeText(this, "NullPointerException ao ler resposta do servidor", Toast.LENGTH_SHORT).show()
+                    }
+                    //fazer evaluateJavaScrip pro front
+                }
+            } catch (e: IOException) {
+                runOnUiThread {
+                    txtResponseServer.text = "Erro de E/S durante a conexão: ${e.message.toString()}"
+                    Toast.makeText(this, "Erro de E/S durante a conexão", Toast.LENGTH_SHORT).show()
+                }
+                //fazer evaluateJavaScrip pro front
+            } catch (e: SocketTimeoutException) {
+                runOnUiThread {
+                    txtResponseServer.text = "Tempo limite excedido ao enviar resposta ao servidor: ${e.message.toString()}"
+                    Toast.makeText(this, "Tempo limite excedido ao enviar resposta ao servidor", Toast.LENGTH_SHORT).show()
+                    //fazer evaluateJavaScrip pro front com false após timeout
                 }
             } catch (e: Exception) {
-                runOnUiThread{
+                runOnUiThread {
                     txtResponseServer.text = "Exception: ${e.message.toString()}"
-                    Toast.makeText(this, "Failed connection", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Falha na conexão", Toast.LENGTH_SHORT).show()
                 }
+                //fazer evaluateJavaScrip pro front
             } finally {
                 try {
                     socket?.close()
                 } catch (e: IOException) {
-                    txtResponseServer.text = "IOException: ${e.message.toString()}"
-                    Toast.makeText(this, "Failed close connection", Toast.LENGTH_SHORT).show()
+                    txtResponseServer.text = "IOException ao fechar a conexão: ${e.message.toString()}"
+                    Toast.makeText(this, "Falha ao fechar a conexão", Toast.LENGTH_SHORT).show()
                 }
             }
         }.start()
